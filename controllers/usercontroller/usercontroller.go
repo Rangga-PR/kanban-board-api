@@ -13,16 +13,34 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+//Controller : act as constructor
+type Controller struct {
+	Collection *mongo.Collection
+}
+
 //SignUpHandler : handle signup routes logic
-func SignUpHandler(ctx context.Context, cancel context.CancelFunc, db *mongo.Database) gin.HandlerFunc {
-	userCol := db.Collection("user")
+func (con *Controller) SignUpHandler() gin.HandlerFunc {
+	userCol := con.Collection
+
 	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
 		var u model.User
 		if err := c.ShouldBindJSON(&u); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"status": "failed",
-				"error":  err.Error(),
+				"error":  "something went wrong",
+			})
+			return
+		}
+
+		var existingUser model.User
+		err := userCol.FindOne(ctx, gin.H{"username": u.Username}).Decode(&existingUser)
+		if existingUser.Username != "" {
+			c.JSON(http.StatusConflict, gin.H{
+				"status": "failed",
+				"error":  "username already taken",
 			})
 			return
 		}
@@ -31,7 +49,6 @@ func SignUpHandler(ctx context.Context, cancel context.CancelFunc, db *mongo.Dat
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println(hashedPassword)
 
 		userData := model.User{
 			Username:  u.Username,
@@ -45,17 +62,22 @@ func SignUpHandler(ctx context.Context, cancel context.CancelFunc, db *mongo.Dat
 			panic(err)
 		}
 
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusCreated, gin.H{
 			"status": "success",
-			"data":   newUser,
+			"data": gin.H{
+				"newUserID": newUser,
+			},
 		})
 	}
 }
 
 //SignInHandler : handle signin routes logic
-func SignInHandler(ctx context.Context, cancel context.CancelFunc, db *mongo.Database) gin.HandlerFunc {
-	userCol := db.Collection("user")
+func (con *Controller) SignInHandler() gin.HandlerFunc {
+	userCol := con.Collection
+
 	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		username := c.Query("username")
 		password := c.Query("password")
 
@@ -72,7 +94,7 @@ func SignInHandler(ctx context.Context, cancel context.CancelFunc, db *mongo.Dat
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"status": "failed",
-				"error":  "user does not exist",
+				"error":  "user not found",
 			})
 			return
 		}

@@ -10,7 +10,7 @@ import (
 )
 
 //ConnectDB : open connection to mongodb atlas database
-func ConnectDB(ctx context.Context, uri string) (*mongo.Database, context.Context) {
+func ConnectDB(ctx context.Context, uri string) *mongo.Database {
 	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 	if err != nil {
 		log.Fatal(err)
@@ -28,5 +28,5 @@ func ConnectDB(ctx context.Context, uri string) (*mongo.Database, context.Contex
 		log.Println("Connected!")
 	}
 
-	return client.Database("kanban"), ctx
+	return client.Database("kanban")
 }

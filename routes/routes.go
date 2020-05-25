@@ -10,17 +10,30 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-//Routes : define server available routes
-func Routes(router *gin.Engine) {
+var (
+	ctx            context.Context
+	cancel         context.CancelFunc
+	db             *mongo.Database
+	userController usercontroller.Controller
+)
+
+func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal(err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	db, ctx := dbconfig.ConnectDB(ctx, os.Getenv("MONGO_URI"))
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	db = dbconfig.ConnectDB(ctx, os.Getenv("MONGO_URI"))
+	userController = usercontroller.Controller{Collection: db.Collection("user")}
+}
 
-	router.POST("/signup", usercontroller.SignUpHandler(ctx, cancel, db))
-	router.POST("/signin", usercontroller.SignInHandler(ctx, cancel, db))
+//Routes : define server available routes
+func Routes(router *gin.Engine) {
+
+	router.POST("/signup", userController.SignUpHandler())
+	router.POST("/signin", userController.SignInHandler())
 }
