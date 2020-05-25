@@ -3,12 +3,14 @@ package usercontroller
 import (
 	"context"
 	"kanban-app-api/model"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 //SignUpHandler : handle signup routes logic
@@ -25,9 +27,15 @@ func SignUpHandler(ctx context.Context, cancel context.CancelFunc, db *mongo.Dat
 			return
 		}
 
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), 11)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(hashedPassword)
+
 		userData := model.User{
 			Username:  u.Username,
-			Password:  u.Password,
+			Password:  string(hashedPassword),
 			CreatedAt: primitive.NewDateTimeFromTime(time.Now().UTC()),
 			UpdatedAt: primitive.NewDateTimeFromTime(time.Now().UTC()),
 		}
@@ -64,7 +72,16 @@ func SignInHandler(ctx context.Context, cancel context.CancelFunc, db *mongo.Dat
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"status": "failed",
-				"error":  "username does not exist or incorrect password",
+				"error":  "user does not exist",
+			})
+			return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(loginUser.Password), []byte(password))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"status": "failed",
+				"error":  "incorrect password",
 			})
 			return
 		}
