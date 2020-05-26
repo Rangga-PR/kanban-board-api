@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	dbconfig "kanban-app-api/config"
+	"kanban-app-api/controllers/taskcontroller"
 	"kanban-app-api/controllers/usercontroller"
 	"log"
 	"os"
@@ -18,6 +19,7 @@ var (
 	cancel         context.CancelFunc
 	db             *mongo.Database
 	userController usercontroller.Controller
+	taskController taskcontroller.Controller
 )
 
 func init() {
@@ -27,8 +29,11 @@ func init() {
 
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
 	db = dbconfig.ConnectDB(ctx, os.Getenv("MONGO_URI"))
+
 	userController = usercontroller.Controller{Collection: db.Collection("user")}
+	taskController = taskcontroller.Controller{Collection: db.Collection("task")}
 }
 
 //Routes : define server available routes
@@ -36,4 +41,7 @@ func Routes(router *gin.Engine) {
 
 	router.POST("/signup", userController.SignUpHandler())
 	router.POST("/signin", userController.SignInHandler())
+	router.GET("/task/:id", taskController.GetTaskHandler())
+	router.POST("/task", taskController.PostTaskHandler())
+
 }
