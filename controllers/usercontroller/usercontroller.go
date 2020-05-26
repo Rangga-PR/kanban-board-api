@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
@@ -36,7 +37,7 @@ func (con *Controller) SignUpHandler() gin.HandlerFunc {
 		}
 
 		var existingUser model.User
-		err := userCol.FindOne(ctx, gin.H{"username": u.Username}).Decode(&existingUser)
+		err := userCol.FindOne(ctx, bson.M{"username": u.Username}).Decode(&existingUser)
 		if existingUser.Username != "" {
 			c.JSON(http.StatusConflict, gin.H{
 				"status": "failed",
@@ -65,7 +66,7 @@ func (con *Controller) SignUpHandler() gin.HandlerFunc {
 		c.JSON(http.StatusCreated, gin.H{
 			"status": "success",
 			"data": gin.H{
-				"newUserID": newUser,
+				"newUserID": newUser.InsertedID,
 			},
 		})
 	}
@@ -90,7 +91,7 @@ func (con *Controller) SignInHandler() gin.HandlerFunc {
 		}
 
 		var loginUser model.User
-		err := userCol.FindOne(ctx, gin.H{"username": username}).Decode(&loginUser)
+		err := userCol.FindOne(ctx, bson.M{"username": username}).Decode(&loginUser)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"status": "failed",
