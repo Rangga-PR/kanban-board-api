@@ -3,7 +3,6 @@ package usercontroller
 import (
 	"context"
 	"kanban-app-api/model"
-	"log"
 	"net/http"
 	"time"
 
@@ -48,7 +47,11 @@ func (con *Controller) SignUpHandler() gin.HandlerFunc {
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), 11)
 		if err != nil {
-			log.Fatal(err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "failed",
+				"error":  "something went wrong",
+			})
+			return
 		}
 
 		userData := model.User{

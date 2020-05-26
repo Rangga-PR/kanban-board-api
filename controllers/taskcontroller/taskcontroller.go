@@ -47,7 +47,11 @@ func (con *Controller) PostTaskHandler() gin.HandlerFunc {
 
 		newTask, err := taskCol.InsertOne(ctx, taskData)
 		if err != nil {
-			panic(err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "failed",
+				"error":  "something went wrong",
+			})
+			return
 		}
 
 		c.JSON(http.StatusCreated, gin.H{
@@ -68,11 +72,13 @@ func (con *Controller) GetTaskHandler() gin.HandlerFunc {
 		defer cancel()
 
 		userid, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			log.Println(err)
+		}
 
 		tasks := []model.Task{}
 		cursor, err := taskCol.Find(ctx, bson.M{"user_id": userid})
 		if err != nil {
-			log.Println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"status": "failed",
 				"error":  "something went wrong",
@@ -89,6 +95,44 @@ func (con *Controller) GetTaskHandler() gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "success",
 			"data":   tasks,
+		})
+
+	}
+}
+
+//DeleteTaskHandler : handle delete task route  logic
+func (con *Controller) DeleteTaskHandler() gin.HandlerFunc {
+	taskCol := con.Collection
+
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		taskid, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			log.Println()
+		}
+
+		deletedTask, err := taskCol.DeleteOne(ctx, bson.M{"_id": taskid})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "failed",
+				"error":  "something went wrong",
+			})
+			return
+		}
+
+		if deletedTask.DeletedCount < 1 {
+			c.JSON(http.StatusNotFound, gin.H{
+				"status": "failed",
+				"error":  "no document with specified id",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":       "success",
+			"task_deleted": deletedTask.DeletedCount,
 		})
 
 	}

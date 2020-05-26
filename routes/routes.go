@@ -43,5 +43,5 @@ func Routes(router *gin.Engine) {
 	router.POST("/signin", userController.SignInHandler())
 	router.GET("/task/:id", taskController.GetTaskHandler())
 	router.POST("/task", taskController.PostTaskHandler())
-
+	router.DELETE("/task/:id", taskController.DeleteTaskHandler())
 }
