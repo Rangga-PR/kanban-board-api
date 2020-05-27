@@ -46,6 +46,11 @@ func (con *Controller) PostTaskHandler() gin.HandlerFunc {
 			return
 		}
 
+		if t.Title == "" || t.Content == "" || t.Icon == "" || t.Status == "" || t.UserID.IsZero() {
+			sendFailedResponse(c, http.StatusBadRequest, "not all of the required data is filled")
+			return
+		}
+
 		taskData := model.Task{
 			UserID:    t.UserID,
 			Title:     t.Title,
@@ -109,6 +114,11 @@ func (con *Controller) DeleteTaskHandler() gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
+		if c.Param("id") == "" {
+			sendFailedResponse(c, http.StatusBadRequest, "no user specified")
+			return
+		}
+
 		taskid, err := primitive.ObjectIDFromHex(c.Param("id"))
 		if err != nil {
 			log.Println()
@@ -139,6 +149,11 @@ func (con *Controller) UpdateTaskHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
+		if c.Param("id") == "" {
+			sendFailedResponse(c, http.StatusBadRequest, "no user specified")
+			return
+		}
 
 		var t model.Task
 		if err := c.ShouldBindJSON(&t); err != nil {

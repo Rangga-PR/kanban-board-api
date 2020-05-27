@@ -42,7 +42,7 @@ func (con *Controller) SignUpHandler() gin.HandlerFunc {
 
 		var u model.User
 		if err := c.ShouldBindJSON(&u); err != nil {
-			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
+			sendFailedResponse(c, http.StatusBadRequest, "please fill username and password")
 			return
 		}
 
