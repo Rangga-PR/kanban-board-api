@@ -18,6 +18,20 @@ type Controller struct {
 	Collection *mongo.Collection
 }
 
+func sendFailedResponse(c *gin.Context, statusCode int, msg string) {
+	c.JSON(statusCode, gin.H{
+		"status": "failed",
+		"error":  msg,
+	})
+}
+
+func sendSuccessResponse(c *gin.Context, statusCode int, data gin.H) {
+	c.JSON(statusCode, gin.H{
+		"status": "success",
+		"result": data,
+	})
+}
+
 //SignUpHandler : handle signup routes logic
 func (con *Controller) SignUpHandler() gin.HandlerFunc {
 	userCol := con.Collection
@@ -28,29 +42,20 @@ func (con *Controller) SignUpHandler() gin.HandlerFunc {
 
 		var u model.User
 		if err := c.ShouldBindJSON(&u); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "failed",
-				"error":  "something went wrong",
-			})
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
 		var existingUser model.User
 		err := userCol.FindOne(ctx, bson.M{"username": u.Username}).Decode(&existingUser)
 		if existingUser.Username != "" {
-			c.JSON(http.StatusConflict, gin.H{
-				"status": "failed",
-				"error":  "username already taken",
-			})
+			sendFailedResponse(c, http.StatusConflict, "username already taken")
 			return
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), 11)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "failed",
-				"error":  "something went wrong",
-			})
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
@@ -63,14 +68,12 @@ func (con *Controller) SignUpHandler() gin.HandlerFunc {
 
 		newUser, err := userCol.InsertOne(ctx, userData)
 		if err != nil {
-			panic(err)
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
+			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{
-			"status": "success",
-			"data": gin.H{
-				"newUserID": newUser.InsertedID,
-			},
+		sendSuccessResponse(c, http.StatusCreated, gin.H{
+			"new_user_id": newUser.InsertedID,
 		})
 	}
 }
@@ -86,38 +89,26 @@ func (con *Controller) SignInHandler() gin.HandlerFunc {
 		password := c.Query("password")
 
 		if username == "" || password == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "failed",
-				"error":  "please fill username and password",
-			})
+			sendFailedResponse(c, http.StatusBadRequest, "please fill username and password")
 			return
 		}
 
 		var loginUser model.User
 		err := userCol.FindOne(ctx, bson.M{"username": username}).Decode(&loginUser)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"status": "failed",
-				"error":  "user not found",
-			})
+			sendFailedResponse(c, http.StatusNotFound, "user not found")
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(loginUser.Password), []byte(password))
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"status": "failed",
-				"error":  "incorrect password",
-			})
+			sendFailedResponse(c, http.StatusNotFound, "incorrect password")
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"status": "success",
-			"data": gin.H{
-				"id":       loginUser.ID,
-				"username": loginUser.Username,
-			},
+		sendSuccessResponse(c, http.StatusCreated, gin.H{
+			"id":       loginUser.ID,
+			"username": loginUser.Username,
 		})
 	}
 }
