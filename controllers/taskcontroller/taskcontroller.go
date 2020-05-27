@@ -137,3 +137,63 @@ func (con *Controller) DeleteTaskHandler() gin.HandlerFunc {
 
 	}
 }
+
+//UpdateTaskHandler : handle patch task route  logic
+func (con *Controller) UpdateTaskHandler() gin.HandlerFunc {
+	taskCol := con.Collection
+
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		var t model.Task
+		if err := c.ShouldBindJSON(&t); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "failed",
+				"error":  "something went wrong",
+			})
+			return
+		}
+
+		taskid, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			log.Println()
+		}
+
+		update := bson.D{
+			primitive.E{
+				Key: "$set", Value: bson.D{
+					primitive.E{Key: "title", Value: t.Title},
+					primitive.E{Key: "content", Value: t.Content},
+				},
+			},
+		}
+
+		updatedTask, err := taskCol.UpdateOne(
+			ctx,
+			bson.M{"_id": taskid},
+			update,
+		)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "failed",
+				"error":  "something went wrong",
+			})
+			return
+		}
+
+		if updatedTask.MatchedCount < 1 {
+			c.JSON(http.StatusNotFound, gin.H{
+				"status": "failed",
+				"error":  "no document found with the specified id",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":       "success",
+			"task_updated": updatedTask.ModifiedCount,
+		})
+	}
+}

@@ -44,4 +44,5 @@ func Routes(router *gin.Engine) {
 	router.GET("/task/:id", taskController.GetTaskHandler())
 	router.POST("/task", taskController.PostTaskHandler())
 	router.DELETE("/task/:id", taskController.DeleteTaskHandler())
+	router.PATCH("/task/:id", taskController.UpdateTaskHandler())
 }
