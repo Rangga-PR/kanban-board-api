@@ -18,6 +18,20 @@ type Controller struct {
 	Collection *mongo.Collection
 }
 
+func sendFailedResponse(c *gin.Context, statusCode int, msg string) {
+	c.JSON(statusCode, gin.H{
+		"status": "failed",
+		"error":  msg,
+	})
+}
+
+func sendSuccessResponse(c *gin.Context, statusCode int, data gin.H) {
+	c.JSON(statusCode, gin.H{
+		"status": "success",
+		"result": data,
+	})
+}
+
 //PostTaskHandler : handle post task routes logic
 func (con *Controller) PostTaskHandler() gin.HandlerFunc {
 	taskCol := con.Collection
@@ -28,10 +42,7 @@ func (con *Controller) PostTaskHandler() gin.HandlerFunc {
 
 		var t model.Task
 		if err := c.ShouldBindJSON(&t); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "failed",
-				"error":  "something went wrong",
-			})
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
@@ -47,18 +58,12 @@ func (con *Controller) PostTaskHandler() gin.HandlerFunc {
 
 		newTask, err := taskCol.InsertOne(ctx, taskData)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "failed",
-				"error":  "something went wrong",
-			})
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{
-			"status": "success",
-			"data": gin.H{
-				"newTaskID": newTask.InsertedID,
-			},
+		sendSuccessResponse(c, http.StatusCreated, gin.H{
+			"newTaskID": newTask.InsertedID,
 		})
 	}
 }
@@ -79,10 +84,7 @@ func (con *Controller) GetTaskHandler() gin.HandlerFunc {
 		tasks := []model.Task{}
 		cursor, err := taskCol.Find(ctx, bson.M{"user_id": userid})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "failed",
-				"error":  "something went wrong",
-			})
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
@@ -92,9 +94,8 @@ func (con *Controller) GetTaskHandler() gin.HandlerFunc {
 			tasks = append(tasks, t)
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"status": "success",
-			"data":   tasks,
+		sendSuccessResponse(c, http.StatusOK, gin.H{
+			"tasks": tasks,
 		})
 
 	}
@@ -115,23 +116,16 @@ func (con *Controller) DeleteTaskHandler() gin.HandlerFunc {
 
 		deletedTask, err := taskCol.DeleteOne(ctx, bson.M{"_id": taskid})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "failed",
-				"error":  "something went wrong",
-			})
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
 		if deletedTask.DeletedCount < 1 {
-			c.JSON(http.StatusNotFound, gin.H{
-				"status": "failed",
-				"error":  "no document with specified id",
-			})
+			sendFailedResponse(c, http.StatusNotFound, "no document with specified id")
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"status":       "success",
+		sendSuccessResponse(c, http.StatusOK, gin.H{
 			"task_deleted": deletedTask.DeletedCount,
 		})
 
@@ -148,10 +142,7 @@ func (con *Controller) UpdateTaskHandler() gin.HandlerFunc {
 
 		var t model.Task
 		if err := c.ShouldBindJSON(&t); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "failed",
-				"error":  "something went wrong",
-			})
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
@@ -176,23 +167,16 @@ func (con *Controller) UpdateTaskHandler() gin.HandlerFunc {
 		)
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "failed",
-				"error":  "something went wrong",
-			})
+			sendFailedResponse(c, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
 		if updatedTask.MatchedCount < 1 {
-			c.JSON(http.StatusNotFound, gin.H{
-				"status": "failed",
-				"error":  "no document found with the specified id",
-			})
+			sendFailedResponse(c, http.StatusNotFound, "no document with specified id")
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"status":       "success",
+		sendSuccessResponse(c, http.StatusOK, gin.H{
 			"task_updated": updatedTask.ModifiedCount,
 		})
 	}
