@@ -106,7 +106,7 @@ func (con *Controller) SignInHandler() gin.HandlerFunc {
 			return
 		}
 
-		sendSuccessResponse(c, http.StatusCreated, gin.H{
+		sendSuccessResponse(c, http.StatusOK, gin.H{
 			"id":       loginUser.ID,
 			"username": loginUser.Username,
 		})
