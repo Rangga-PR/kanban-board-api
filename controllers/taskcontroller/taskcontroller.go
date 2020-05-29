@@ -171,6 +171,8 @@ func (con *Controller) UpdateTaskHandler() gin.HandlerFunc {
 				Key: "$set", Value: bson.D{
 					primitive.E{Key: "title", Value: t.Title},
 					primitive.E{Key: "content", Value: t.Content},
+					primitive.E{Key: "status", Value: t.Status},
+					primitive.E{Key: "icon", Value: t.Icon},
 				},
 			},
 		}
